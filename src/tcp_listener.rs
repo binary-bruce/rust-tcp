@@ -4,7 +4,7 @@ use crate::{interface_handle::InterfaceHandle, tcp_stream::TcpStream};
 
 pub struct TcpListener {
     pub port: u16,
-    pub h: InterfaceHandle,
+    pub(crate) h: InterfaceHandle,
 }
 
 impl Drop for TcpListener {

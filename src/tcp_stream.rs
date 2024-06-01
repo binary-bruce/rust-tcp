@@ -1,10 +1,12 @@
 use std::io::{self, Read, Write};
 
-use crate::{interface_handle::InterfaceHandle, Quad, SENDQUEUE_SIZE};
+use crate::{interface_handle::InterfaceHandle, quad::Quad};
+
+const SENDQUEUE_SIZE: usize = 1024;
 
 pub struct TcpStream {
     pub quad: Quad,
-    pub h: InterfaceHandle,
+    pub(crate) h: InterfaceHandle,
 }
 
 impl Drop for TcpStream {
