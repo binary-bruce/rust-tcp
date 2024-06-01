@@ -60,31 +60,12 @@ impl Connection {
         let iss = 0;
         let wnd = 1024;
         let mut c = Connection {
-            timers: Timers {
-                send_times: Default::default(),
-                srtt: time::Duration::from_secs(1 * 60).as_secs_f64(),
-            },
+            timers: Timers::default(),
             state: State::SynRcvd,
             send: SendSequenceSpace::new(iss, wnd),
             recv: RecvSequenceSpace::new(tcph.sequence_number(), tcph.window_size()),
-            tcp: etherparse::TcpHeader::new(tcph.destination_port(), tcph.source_port(), iss, wnd),
-            ip: etherparse::Ipv4Header::new(
-                0,
-                64,
-                etherparse::IpTrafficClass::Tcp,
-                [
-                    iph.destination()[0],
-                    iph.destination()[1],
-                    iph.destination()[2],
-                    iph.destination()[3],
-                ],
-                [
-                    iph.source()[0],
-                    iph.source()[1],
-                    iph.source()[2],
-                    iph.source()[3],
-                ],
-            ),
+            tcp: construct_tcp_header(tcph, iss, wnd),
+            ip: construct_ip_header(iph),
 
             incoming: Default::default(),
             unacked: Default::default(),
@@ -198,7 +179,7 @@ impl Connection {
         if wrapping_lt(self.send.nxt, next_seq) {
             self.send.nxt = next_seq;
         }
-        self.timers.send_times.insert(seq, time::Instant::now());
+        self.timers.insert_send_timer(seq);
 
         nic.send(&buf[..payload_ends_at])?;
         Ok(payload_bytes)
