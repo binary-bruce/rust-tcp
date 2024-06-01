@@ -2,8 +2,8 @@ use std::io;
 
 use crate::{
     interface_handle::InterfaceHandle,
+    quad::Quad,
     tcp::{available::Available, connection::Connection},
-    Quad,
 };
 
 pub(crate) fn packet_loop(mut nic: tun_tap::Iface, ih: InterfaceHandle) -> io::Result<()> {

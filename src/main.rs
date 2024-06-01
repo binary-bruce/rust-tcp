@@ -1,8 +1,10 @@
 use std::io::prelude::*;
 use std::{io, thread};
 
+use trust::Interface;
+
 fn main() -> io::Result<()> {
-    let mut i = trust::Interface::new()?;
+    let mut i = Interface::new()?;
     eprintln!("created interface");
     let mut listener = i.bind(8000)?;
     while let Ok(mut stream) = listener.accept() {
