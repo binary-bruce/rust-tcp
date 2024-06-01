@@ -232,7 +232,7 @@ impl Connection {
             buf.len(),
             self.tcp.header_len() as usize + self.ip.header_len() as usize + max_data,
         );
-        self.ip
+        let _ = self.ip
             .set_payload_len(size - self.ip.header_len() as usize);
 
         // write out the headers and the payload
@@ -240,7 +240,7 @@ impl Connection {
         let buf_len = buf.len();
         let mut unwritten = &mut buf[..];
 
-        self.ip.write(&mut unwritten);
+        let _ = self.ip.write(&mut unwritten);
         let ip_header_ends_at = buf_len - unwritten.len();
 
         // postpone writing the tcp header because we need the payload as one contiguous slice to calculate the tcp checksum
@@ -271,7 +271,7 @@ impl Connection {
             .expect("failed to compute checksum");
 
         let mut tcp_header_buf = &mut buf[ip_header_ends_at..tcp_header_ends_at];
-        self.tcp.write(&mut tcp_header_buf);
+        let _ = self.tcp.write(&mut tcp_header_buf);
 
         let mut next_seq = seq.wrapping_add(payload_bytes as u32);
         if self.tcp.syn {
@@ -466,7 +466,7 @@ impl Connection {
                     let old = std::mem::replace(&mut self.timers.send_times, BTreeMap::new());
 
                     let una = self.send.una;
-                    let mut srtt = &mut self.timers.srtt;
+                    let srtt = &mut self.timers.srtt;
                     self.timers
                         .send_times
                         .extend(old.into_iter().filter_map(|(seq, sent)| {
