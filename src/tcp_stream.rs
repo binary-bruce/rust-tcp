@@ -6,20 +6,12 @@ const SENDQUEUE_SIZE: usize = 1024;
 
 pub struct TcpStream {
     pub quad: Quad,
-    pub(crate) h: InterfaceHandle,
-}
-
-impl Drop for TcpStream {
-    fn drop(&mut self) {
-        let cm = self.h.manager.lock().unwrap();
-        // TODO: send FIN on cm.connections[quad]
-        // TODO: _eventually_ remove self.quad from cm.connections
-    }
+    pub(crate) interface_handle: InterfaceHandle,
 }
 
 impl Read for TcpStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let mut cm = self.h.manager.lock().unwrap();
+        let mut cm = self.interface_handle.manager.lock().unwrap();
         loop {
             let c = cm.connections.get_mut(&self.quad).ok_or_else(|| {
                 io::Error::new(
@@ -46,14 +38,14 @@ impl Read for TcpStream {
                 return Ok(nread);
             }
 
-            cm = self.h.rcv_var.wait(cm).unwrap();
+            cm = self.interface_handle.rcv_var.wait(cm).unwrap();
         }
     }
 }
 
 impl Write for TcpStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let mut cm = self.h.manager.lock().unwrap();
+        let mut cm = self.interface_handle.manager.lock().unwrap();
         let c = cm.connections.get_mut(&self.quad).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::ConnectionAborted,
@@ -76,7 +68,7 @@ impl Write for TcpStream {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        let mut cm = self.h.manager.lock().unwrap();
+        let mut cm = self.interface_handle.manager.lock().unwrap();
         let c = cm.connections.get_mut(&self.quad).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::ConnectionAborted,
@@ -98,7 +90,7 @@ impl Write for TcpStream {
 
 impl TcpStream {
     pub fn shutdown(&self, how: std::net::Shutdown) -> io::Result<()> {
-        let mut cm = self.h.manager.lock().unwrap();
+        let mut cm = self.interface_handle.manager.lock().unwrap();
         let c = cm.connections.get_mut(&self.quad).ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::ConnectionAborted,
@@ -107,5 +99,13 @@ impl TcpStream {
         })?;
 
         c.close()
+    }
+}
+
+impl Drop for TcpStream {
+    fn drop(&mut self) {
+        let cm = self.interface_handle.manager.lock().unwrap();
+        // TODO: send FIN on cm.connections[quad]
+        // TODO: _eventually_ remove self.quad from cm.connections
     }
 }

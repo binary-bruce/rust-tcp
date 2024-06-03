@@ -8,22 +8,8 @@ use crate::packet_loop::packet_loop;
 use crate::tcp_listener::TcpListener;
 
 pub struct Interface {
-    ih: Option<InterfaceHandle>,
-    jh: Option<thread::JoinHandle<io::Result<()>>>,
-}
-
-impl Drop for Interface {
-    fn drop(&mut self) {
-        self.ih.as_mut().unwrap().manager.lock().unwrap().terminate = true;
-
-        drop(self.ih.take());
-        self.jh
-            .take()
-            .expect("interface dropped more than once")
-            .join()
-            .unwrap()
-            .unwrap();
-    }
+    interface_handle: Option<InterfaceHandle>,
+    join_handle: Option<thread::JoinHandle<io::Result<()>>>,
 }
 
 impl Interface {
@@ -38,14 +24,20 @@ impl Interface {
         };
 
         Ok(Interface {
-            ih: Some(ih),
-            jh: Some(jh),
+            interface_handle: Some(ih),
+            join_handle: Some(jh),
         })
     }
 
     pub fn bind(&mut self, port: u16) -> io::Result<TcpListener> {
         use std::collections::hash_map::Entry;
-        let mut cm = self.ih.as_mut().unwrap().manager.lock().unwrap();
+        let mut cm = self
+            .interface_handle
+            .as_mut()
+            .unwrap()
+            .manager
+            .lock()
+            .unwrap();
         match cm.pending.entry(port) {
             Entry::Vacant(v) => {
                 v.insert(VecDeque::new());
@@ -60,7 +52,21 @@ impl Interface {
         drop(cm);
         Ok(TcpListener {
             port,
-            h: self.ih.as_mut().unwrap().clone(),
+            interface_handle: self.interface_handle.as_mut().unwrap().clone(),
         })
+    }
+}
+
+impl Drop for Interface {
+    fn drop(&mut self) {
+        self.interface_handle.as_mut().unwrap().terminate();
+
+        drop(self.interface_handle.take());
+        self.join_handle
+            .take()
+            .expect("interface dropped more than once")
+            .join()
+            .unwrap()
+            .unwrap();
     }
 }
